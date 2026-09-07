@@ -17,8 +17,14 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 
 public class InternetArchiveProvider implements MediaProvider {
+
+    private static final Logger LOGGER =
+	    Logger.getLogger(InternetArchiveProvider.class.getName());
 
     private static final String SEARCH_URL =
             "https://archive.org/advancedsearch.php";
@@ -103,7 +109,7 @@ public class InternetArchiveProvider implements MediaProvider {
         int requestedHeight =
                 parseQualityHeight(quality);
 
-        System.out.println(
+        LOGGER.info(
                 "Searching Archive..."
         );
 
@@ -115,7 +121,7 @@ String providerItemId =
 if (providerItemId != null
         && !providerItemId.isBlank()) {
 
-    System.out.println(
+    LOGGER.info(
             "Using exact Archive item from metadata: "
                     + providerItemId
     );
@@ -130,12 +136,8 @@ if (providerItemId != null
 
 } else {
 
-    System.out.println(
+    LOGGER.info(
             "No exact Archive item ID available."
-    );
-
-    System.out.println(
-            "Searching Archive..."
     );
 
     int releaseYear =
@@ -143,7 +145,7 @@ if (providerItemId != null
                     media.getReleaseDate()
             );
 
-    System.out.println(
+    LOGGER.info(
             "Year used for matching: "
                     + releaseYear
     );
@@ -154,14 +156,14 @@ if (providerItemId != null
                     releaseYear
             );
 
-    System.out.println(
+    LOGGER.info(
             "Archive candidates found: "
                     + candidates.size()
     );
 
     for (ArchiveCandidate candidate : candidates) {
 
-        System.out.println(
+        LOGGER.fine(
                 "Candidate: "
                         + candidate.title
                         + " | year="
@@ -200,11 +202,6 @@ if (providerItemId != null
         		);
     		}
 	}
-
-	System.out.println(
-        "Selected Archive item: "
-                + selectedCandidate.identifier
-	);
         System.out.println(
                 "Selected Archive item: "
                         + selectedCandidate.identifier
@@ -237,47 +234,23 @@ if (providerItemId != null
 	RightsInfo rights =
         	inspectRights(metadataNode);
 
-	System.out.println();
-	System.out.println("Rights validation");
-	System.out.println("------------------------------");
-
-	System.out.println(
-        	"License: "
-                	+ rights.license
-	);
-
-	System.out.println(
-        	"Rights: "
-                	+ rights.rights
-	);
-
-	System.out.println(
-        	"Description: "
-        	        + rights.description
-	);
-
-	System.out.println(
-        	"Rights status: "
-                	+ (
-                rights.authorized
-                        ? "AUTHORIZED"
-                        : "NOT AUTHORIZED / AMBIGUOUS"
-        )
-	);
-
-	System.out.println(
-        "------------------------------"
+	LOGGER.info(
+		"Rights validation | License: "
+			+ rights.license
+			+ " | Rights: "
+			+ rights.rights
+			+ " | Authorized: "
+			+ rights.authorized
 	);
 
         if (!rights.authorized) {
 
-    System.out.println();
-    System.out.println(
-            "Exact metadata item is not authorized."
+    LOGGER.warning(
+		"Exact metadata item is not authorized."
     );
 
-    System.out.println(
-            "Falling back to Archive candidate search..."
+    LOGGER.info(
+		"Falling back to Archive candidate search."
     );
 
     int releaseYear =
@@ -299,7 +272,7 @@ if (providerItemId != null
     for (ArchiveCandidate candidate :
             fallbackCandidates) {
 
-        System.out.println(
+        LOGGER.info(
                 "Checking fallback candidate: "
                         + candidate.identifier
         );
@@ -321,8 +294,8 @@ if (providerItemId != null
                             candidateMetadataNode
                     );
 
-            System.out.println(
-                    "  Rights: "
+            LOGGER.info(
+                    " Fallback candidate rights: "
                             + (
                             candidateRights.authorized
                                     ? "AUTHORIZED"
@@ -349,9 +322,11 @@ if (providerItemId != null
 
         } catch (Exception e) {
 
-            System.out.println(
+            LOGGER.log(
+		    Level.WARNING,
                     "  Candidate metadata check failed: "
-                            + e.getMessage()
+                            +  candidate.identifier,
+		    e
             );
         }
     }
@@ -418,15 +393,14 @@ if (providerItemId != null
             );
         }
 
-        System.out.println();
-        System.out.println(
+        LOGGER.fine(
                 "Available MP4 files:"
         );
 
         for (VideoFile file : videoFiles) {
 
-            System.out.println(
-                    "  "
+            LOGGER.fine(
+                    "MP4: "
                             + file.name
                             + " | "
                             + file.height
