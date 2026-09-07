@@ -23,7 +23,7 @@ public class InternetArchiveTest {
                 "1968-01-01",
                 7.0,
                 null,
-		""
+		"internet_archive"
         );
 
         System.out.println();

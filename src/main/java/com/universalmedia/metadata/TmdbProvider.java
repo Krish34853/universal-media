@@ -167,7 +167,7 @@ public class TmdbProvider implements MetadataProvider {
                             releaseDate,
                             rating,
                             posterPath,
-			    ""
+			    "tmdb"
                     )
             );
         }

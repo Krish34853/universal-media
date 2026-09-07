@@ -358,7 +358,7 @@ public List<Media> search(String query) throws Exception {
                         candidate.year,
                         0.0,
                         "",
-			candidate.identifier
+			"internet_archive"
                 )
             );
         }
