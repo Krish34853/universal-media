@@ -10,6 +10,7 @@ public class Media {
     private final double rating;
     private final String posterPath;
     private final String providerId;
+    private final String providerItemId;
 
     public Media(
             int id,
@@ -19,7 +20,31 @@ public class Media {
             String releaseDate,
             double rating,
             String posterPath,
-	    String providerId
+            String providerId
+    ) {
+        this(
+                id,
+                title,
+                mediaType,
+                overview,
+                releaseDate,
+                rating,
+                posterPath,
+                providerId,
+                null
+        );
+    }
+
+    public Media(
+            int id,
+            String title,
+            String mediaType,
+            String overview,
+            String releaseDate,
+            double rating,
+            String posterPath,
+            String providerId,
+            String providerItemId
     ) {
         this.id = id;
         this.title = title;
@@ -28,7 +53,8 @@ public class Media {
         this.releaseDate = releaseDate;
         this.rating = rating;
         this.posterPath = posterPath;
-	this.providerId =  providerId;
+        this.providerId = providerId;
+        this.providerItemId = providerItemId;
     }
 
     public int getId() {
@@ -60,7 +86,11 @@ public class Media {
     }
 
     public String getProviderId() {
-	return providerId;
+        return providerId;
+    }
+
+    public String getProviderItemId() {
+        return providerItemId;
     }
 
     @Override

@@ -10,6 +10,8 @@ import com.googlecode.lanterna.screen.Screen;
 import com.googlecode.lanterna.terminal.DefaultTerminalFactory;
 
 import com.universalmedia.metadata.TmdbProvider;
+import com.universalmedia.metadata.MetadataManager;
+import com.universalmedia.metadata.InternetArchiveMetadataProvider;
 import com.universalmedia.model.Media;
 import com.universalmedia.playback.MpvPlayer;
 import com.universalmedia.providers.ProviderManager;
@@ -35,6 +37,7 @@ public class Main {
     private ProviderManager providerManager;
     private InternetArchiveProvider internetArchiveProvider;
     private MpvPlayer mpvPlayer;
+    private MetadataManager metadataManager;
 
     // ============================================================
     // CONSTRUCTOR
@@ -53,6 +56,11 @@ public class Main {
         }
 
         tmdbProvider = new TmdbProvider(token);
+
+	metadataManager = new MetadataManager();
+	metadataManager.registerProvider(tmdbProvider);
+	metadataManager.registerProvider(new InternetArchiveMetadataProvider());
+
 	providerManager = new ProviderManager();
 	internetArchiveProvider = new InternetArchiveProvider();
 	providerManager.registerProvider(internetArchiveProvider);
@@ -357,15 +365,11 @@ public class Main {
 
                     try {
 
-                        List<Media> tmdbResults =
-                                tmdbProvider.search(query);
-
-                        List<Media> archiveResults =
-                                internetArchiveProvider.search(query);
+                        List<Media> results =
+                                metadataManager.search(query);
 
                         int totalResults =
-                                tmdbResults.size()
-                                        + archiveResults.size();
+                                results.size();
 
                         if (totalResults == 0) {
 
@@ -381,53 +385,71 @@ public class Main {
                                         + totalResults
                         );
 
-                        if (!tmdbResults.isEmpty()) {
+    List<Media> tmdbResults =
+        results.stream()
+                .filter(media ->
+                        "tmdb".equalsIgnoreCase(
+                                media.getProviderId()
+                        )
+                )
+                .toList();
 
-                            resultsList.addItem(
-                                    "========== TMDB ==========",
-                                    () -> {}
-                            );
+    List<Media> archiveResults =
+        results.stream()
+                .filter(media ->
+                        "internet_archive".equalsIgnoreCase(
+                                media.getProviderId()
+                        )
+                )
+                .toList();
 
-                            for (Media media : tmdbResults) {
+     if (!tmdbResults.isEmpty()) {
 
-                                String label =
-                                        media.getTitle()
-                                                + " ["
-                                                + media.getMediaType()
-                                                + "]";
+    resultsList.addItem(
+            "========== TMDB ==========",
+            () -> {}
+    );
 
-                                resultsList.addItem(
-                                        label,
-                                        () -> showMediaDetails(
-                                                media,
-                                                searchWindow
-                                        )
-                                );
-                            }
-                        }
+    for (Media media : tmdbResults) {
 
-                        if (!archiveResults.isEmpty()) {
+        String label =
+                media.getTitle()
+                        + " ["
+                        + media.getMediaType()
+                        + "]";
 
-                            resultsList.addItem(
-                                    "===== INTERNET ARCHIVE =====",
-                                    () -> {}
-                            );
+        resultsList.addItem(
+                label,
+                () -> showMediaDetails(
+                        media,
+                        searchWindow
+                )
+        );
+    }
+    }
 
-                            for (Media media : archiveResults) {
+    if (!archiveResults.isEmpty()) {
 
-                                String label =
-                                        media.getTitle()
-                                                + " [Internet Archive]";
+    resultsList.addItem(
+            "===== INTERNET ARCHIVE =====",
+            () -> {}
+    );
 
-                                resultsList.addItem(
-                                        label,
-                                        () -> showMediaDetails(
-                                                media,
-                                                searchWindow
-                                        )
-                                );
-                            }
-                        }
+    for (Media media : archiveResults) {
+
+        String label =
+                media.getTitle()
+                        + " [Internet Archive]";
+
+        resultsList.addItem(
+                label,
+                () -> showMediaDetails(
+                        media,
+                        searchWindow
+                )
+        );
+    }
+    }
 
                     } catch (Exception e) {
 

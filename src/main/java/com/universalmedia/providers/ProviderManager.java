@@ -38,11 +38,18 @@ public class ProviderManager {
         String providerId =
                 media.getProviderId();
 
+        System.out.println(
+        );
+
+        System.out.println(
+        );
+
         if (providerId == null || providerId.isBlank()) {
             return null;
         }
 
         for (MediaProvider provider : providers) {
+
 
             if (!provider.getProviderId()
                     .equalsIgnoreCase(providerId)) {

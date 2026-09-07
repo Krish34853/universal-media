@@ -107,66 +107,104 @@ public class InternetArchiveProvider implements MediaProvider {
                 "Searching Archive..."
         );
 
-        int releaseYear =
-                extractYear(media.getReleaseDate());
+	ArchiveCandidate selectedCandidate;
+
+String providerItemId =
+        media.getProviderItemId();
+
+if (providerItemId != null
+        && !providerItemId.isBlank()) {
+
+    System.out.println(
+            "Using exact Archive item from metadata: "
+                    + providerItemId
+    );
+
+    selectedCandidate =
+            new ArchiveCandidate(
+                    providerItemId,
+                    media.getTitle(),
+                    media.getReleaseDate(),
+                    100
+            );
+
+} else {
+
+    System.out.println(
+            "No exact Archive item ID available."
+    );
+
+    System.out.println(
+            "Searching Archive..."
+    );
+
+    int releaseYear =
+            extractYear(
+                    media.getReleaseDate()
+            );
+
+    System.out.println(
+            "Year used for matching: "
+                    + releaseYear
+    );
+
+    List<ArchiveCandidate> candidates =
+            searchArchive(
+                    media.getTitle(),
+                    releaseYear
+            );
+
+    System.out.println(
+            "Archive candidates found: "
+                    + candidates.size()
+    );
+
+    for (ArchiveCandidate candidate : candidates) {
 
         System.out.println(
-                "Year used for matching: "
-                        + releaseYear
+                "Candidate: "
+                        + candidate.title
+                        + " | year="
+                        + candidate.year
+                        + " | score="
+                        + candidate.score
         );
+    }
 
-        List<ArchiveCandidate> candidates =
-                searchArchive(
-                        media.getTitle(),
-                        releaseYear
-                );
-
-        System.out.println(
-                "Archive candidates found: "
-                        + candidates.size()
+    if (candidates.isEmpty()) {
+        throw new RuntimeException(
+                "No Internet Archive candidates found for: "
+                        + media.getTitle()
         );
+    }
 
-        for (ArchiveCandidate candidate : candidates) {
+    selectedCandidate =
+            candidates.stream()
+                    .filter(candidate -> candidate.score >= 45)
+                    .max(
+                            Comparator
+                                    .comparingInt(
+                                            (ArchiveCandidate c)
+                                                    -> c.score
+                                    )
+                                    .thenComparing(
+                                            c -> c.year
+                                    )
+                    )
+                    .orElse(null);
 
-            System.out.println(
-                    "Candidate: "
-                            + candidate.title
-                            + " | year="
-                            + candidate.year
-                            + " | score="
-                            + candidate.score
-            );
-        }
+    if (selectedCandidate == null) {
+        throw new RuntimeException(
+                "No sufficiently matching Internet Archive movie found for: "
+                        + media.getTitle()
+        		);
+    		}
+	}
 
-        if (candidates.isEmpty()) {
-            throw new RuntimeException(
-                    "No Internet Archive candidates found for: "
-                            + media.getTitle()
-            );
-        }
-
-        ArchiveCandidate selectedCandidate =
-                candidates.stream()
-                        .filter(candidate -> candidate.score >= 45)
-                        .max(
-                                Comparator
-                                        .comparingInt(
-                                                (ArchiveCandidate c)
-                                                        -> c.score
-                                        )
-                                        .thenComparing(
-                                                c -> c.year
-                                        )
-                        )
-                        .orElse(null);
-
-        if (selectedCandidate == null) {
-            throw new RuntimeException(
-                    "No sufficiently matching Internet Archive movie found for: "
-                            + media.getTitle()
-            );
-        }
-
+	System.out.println(
+        "Selected Archive item: "
+                + selectedCandidate.identifier
+	);
         System.out.println(
                 "Selected Archive item: "
                         + selectedCandidate.identifier
@@ -196,50 +234,174 @@ public class InternetArchiveProvider implements MediaProvider {
          * ------------------------------------------------------------
          */
 
-        RightsInfo rights =
-                inspectRights(metadataNode);
+	RightsInfo rights =
+        	inspectRights(metadataNode);
 
-        System.out.println();
-        System.out.println("Rights validation");
-        System.out.println("------------------------------");
+	System.out.println();
+	System.out.println("Rights validation");
+	System.out.println("------------------------------");
+
+	System.out.println(
+        	"License: "
+                	+ rights.license
+	);
+
+	System.out.println(
+        	"Rights: "
+                	+ rights.rights
+	);
+
+	System.out.println(
+        	"Description: "
+        	        + rights.description
+	);
+
+	System.out.println(
+        	"Rights status: "
+                	+ (
+                rights.authorized
+                        ? "AUTHORIZED"
+                        : "NOT AUTHORIZED / AMBIGUOUS"
+        )
+	);
+
+	System.out.println(
+        "------------------------------"
+	);
+
+	if (!rights.authorized
+        && media.getProviderItemId() != null
+        && !media.getProviderItemId().isBlank()) {
+
+    System.out.println();
+    System.out.println(
+            "Exact metadata item is not authorized."
+    );
+
+    System.out.println(
+            "Falling back to Archive candidate search..."
+    );
+
+    int releaseYear =
+            extractYear(
+                    media.getReleaseDate()
+            );
+
+    List<ArchiveCandidate> fallbackCandidates =
+            searchArchive(
+                    media.getTitle(),
+                    releaseYear
+            );
+
+    ArchiveCandidate authorizedCandidate = null;
+    JsonNode authorizedMetadata = null;
+    JsonNode authorizedMetadataNode = null;
+    RightsInfo authorizedRights = null;
+
+    for (ArchiveCandidate candidate :
+            fallbackCandidates) {
 
         System.out.println(
-                "License: "
-                        + rights.license
+                "Checking fallback candidate: "
+                        + candidate.identifier
         );
 
-        System.out.println(
-                "Rights: "
-                        + rights.rights
-        );
+        try {
 
-        System.out.println(
-                "Description: "
-                        + rights.description
-        );
+            JsonNode candidateMetadata =
+                    getMetadata(
+                            candidate.identifier
+                    );
 
-        System.out.println(
-                "Rights status: "
-                        + (
-                        rights.authorized
-                                ? "AUTHORIZED"
-                                : "NOT AUTHORIZED / AMBIGUOUS"
-                )
-        );
+            JsonNode candidateMetadataNode =
+                    candidateMetadata.path(
+                            "metadata"
+                    );
 
-        System.out.println(
-                "------------------------------"
-        );
+            RightsInfo candidateRights =
+                    inspectRights(
+                            candidateMetadataNode
+                    );
 
-        if (!rights.authorized) {
+            System.out.println(
+                    "  Rights: "
+                            + (
+                            candidateRights.authorized
+                                    ? "AUTHORIZED"
+                                    : "NOT AUTHORIZED"
+                    )
+            );
 
-            throw new RuntimeException(
-                    "Internet Archive item does not contain sufficiently clear "
-                            + "public-domain or open-license information: "
-                            + selectedCandidate.identifier
+            if (candidateRights.authorized) {
+
+                authorizedCandidate =
+                        candidate;
+
+                authorizedMetadata =
+                        candidateMetadata;
+
+                authorizedMetadataNode =
+                        candidateMetadataNode;
+
+                authorizedRights =
+                        candidateRights;
+
+                break;
+            }
+
+        } catch (Exception e) {
+
+            System.out.println(
+                    "  Candidate metadata check failed: "
+                            + e.getMessage()
             );
         }
+    }
 
+    if (authorizedCandidate == null) {
+
+        throw new RuntimeException(
+                "No authorized Internet Archive movie found for: "
+                        + media.getTitle()
+        );
+    }
+
+    selectedCandidate =
+            authorizedCandidate;
+
+    metadata =
+            authorizedMetadata;
+
+    metadataNode =
+            authorizedMetadataNode;
+
+    rights =
+            authorizedRights;
+
+    System.out.println();
+    System.out.println(
+            "Selected authorized fallback item: "
+                    + selectedCandidate.identifier
+    );
+
+    System.out.println(
+            "License: "
+                    + rights.license
+    );
+
+    System.out.println(
+            "Rights: "
+                    + rights.rights
+    	);
+
+	} else if (!rights.authorized) {
+
+    throw new RuntimeException(
+            "Internet Archive item does not contain sufficiently clear "
+                    + "public-domain or open-license information: "
+                    + selectedCandidate.identifier
+    	);
+	}
         /*
          * ------------------------------------------------------------
          * VIDEO FILE DISCOVERY
@@ -338,37 +500,28 @@ public class InternetArchiveProvider implements MediaProvider {
  * ================================================================
  */
 
-public List<Media> search(String query) throws Exception {
+private String cleanSearchTitle(
+        String title
+) {
 
-    if (query == null || query.isBlank()) {
-        return List.of();
+    if (title == null) {
+        return "";
     }
 
-    List<ArchiveCandidate> candidates =
-            searchArchive(query, 0);
-
-    List<Media> results =
-            new ArrayList<>();
-
-    int id = -1;
-
-        for (ArchiveCandidate candidate : candidates) {
-
-            results.add(
-                new Media(
-                        id--,
-                        candidate.title,
-                        "movie",
-                        "Internet Archive public-domain/open-license movie",
-                        candidate.year,
-                        0.0,
-                        "",
-			"internet_archive"
-                )
-            );
-        }
-
-        return results;
+    return title
+            .replaceAll(
+                    "(?i)\\b(2160p|1440p|1080p|720p|576p|480p|360p|4k|uhd|hd)\\b",
+                    " "
+            )
+            .replaceAll(
+                    "\\b(19|20)\\d{2}\\b",
+                    " "
+            )
+            .replaceAll(
+                    "\\s+",
+                    " "
+            )
+            .trim();
 }
 
     private List<ArchiveCandidate> searchArchive(
@@ -376,15 +529,17 @@ public List<Media> search(String query) throws Exception {
             int releaseYear
     ) throws Exception {
 
+        String cleanedTitle = 
+		cleanSearchTitle(title);
+
         String normalizedTitle =
-                normalizeTitle(title);
+                normalizeTitle(cleanedTitle);
 
         String query =
-                "collection:feature_films "
-                        + "AND mediatype:movies "
-                        + "AND title:("
-                        + escapeArchiveQuery(title)
-                        + ")";
+                "mediatype:movies "
+                        + "AND title:(\""
+                        + escapeArchiveQuery(cleanedTitle)
+                        + "\")";
 
         String url =
                 SEARCH_URL
