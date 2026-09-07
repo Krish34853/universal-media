@@ -269,9 +269,7 @@ if (providerItemId != null
         "------------------------------"
 	);
 
-	if (!rights.authorized
-        && media.getProviderItemId() != null
-        && !media.getProviderItemId().isBlank()) {
+        if (!rights.authorized) {
 
     System.out.println();
     System.out.println(

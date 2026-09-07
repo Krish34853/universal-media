@@ -5,8 +5,13 @@ import com.universalmedia.model.ResolvedStream;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ProviderManager {
+
+    private static final Logger LOGGER =
+	    Logger.getLogger(ProviderManager.class.getName());
 
     private final List<MediaProvider> providers =
             new ArrayList<>();
@@ -22,9 +27,9 @@ public class ProviderManager {
 
         providers.add(provider);
 
-        System.out.println(
-                "Registered provider: "
-                        + provider.getName()
+	LOGGER.info(
+		() -> "Registered provider: "
+			+ provider.getName()
         );
     }
 
@@ -37,12 +42,6 @@ public class ProviderManager {
 
         String providerId =
                 media.getProviderId();
-
-        System.out.println(
-        );
-
-        System.out.println(
-        );
 
         if (providerId == null || providerId.isBlank()) {
             return null;
@@ -93,12 +92,29 @@ public class ProviderManager {
                 continue;
             }
 
-            if (!provider.supports(media)) {
-                continue;
-            }
+		boolean supported;
 
-            System.out.println(
-                    "Trying provider: "
+		try {
+
+		    supported = provider.supports(media);
+
+		} catch (Exception e) {
+
+		    LOGGER.log(
+		            Level.WARNING,
+		            "Provider support check failed: "
+		                    + provider.getName(),
+		            e
+		    );
+
+		    continue;
+	    }
+
+		if (!supported) {
+    		    continue;
+	    }
+            LOGGER.info(
+                   () -> "Trying provider: "
                             + provider.getName()
             );
 
@@ -112,36 +128,35 @@ public class ProviderManager {
 
                 if (stream == null) {
 
-                    System.out.println(
-                            "Provider returned no stream: "
+                    LOGGER.warning(
+                           () ->  "Provider returned no stream: "
                                     + provider.getName()
                     );
 
                     continue;
                 }
 
-                System.out.println(
-                        "Provider succeeded: "
+                LOGGER.info(
+                       () -> "Provider succeeded: "
                                 + provider.getName()
                 );
 
                 return stream;
 
-            } catch (Exception e) {
-
-                lastException = e;
-
-                System.out.println(
-                        "Provider failed: "
-                                + provider.getName()
-                );
-
-                System.out.println(
-                        "Reason: "
-                                + e.getMessage()
-                );
             }
-        }
+
+	    catch (Exception e) {
+
+    		lastException = e;
+
+    		LOGGER.log(
+            		Level.WARNING,
+            		"Provider failed: " + provider.getName(),
+            		e
+    	    	);
+	    }
+
+	}
 
         if (lastException != null) {
 

@@ -5,7 +5,13 @@ import com.universalmedia.model.Media;
 import java.util.ArrayList;
 import java.util.List;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 public class MetadataManager {
+
+    private static final Logger LOGGER =
+	    Logger.getLogger(MetadataManager.class.getName());
 
     private final List<MetadataProvider> providers =
             new ArrayList<>();
@@ -22,8 +28,8 @@ public class MetadataManager {
 
         providers.add(provider);
 
-        System.out.println(
-                "Registered metadata provider: "
+        LOGGER.info(
+                () -> "Registered metadata provider: "
                         + provider.getClass().getSimpleName()
         );
     }
@@ -40,8 +46,8 @@ public class MetadataManager {
 
         for (MetadataProvider provider : providers) {
 
-            System.out.println(
-                    "Searching with metadata provider: "
+            LOGGER.info(
+                    () -> "Searching with metadata provider: "
                             + provider.getClass().getSimpleName()
             );
 
@@ -56,14 +62,11 @@ public class MetadataManager {
 
             } catch (Exception e) {
 
-                System.out.println(
-                        "Metadata provider failed: "
-                                + provider.getClass().getSimpleName()
-                );
-
-                System.out.println(
-                        "Reason: "
-                                + e.getMessage()
+                LOGGER.log(
+			Level.WARNING,
+			"Mettadata provider failed: "
+				+ provider.getClass().getSimpleName(),
+                         e
                 );
             }
         }
