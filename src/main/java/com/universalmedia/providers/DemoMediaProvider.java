@@ -16,6 +16,11 @@ public class DemoMediaProvider implements MediaProvider {
     }
 
     @Override
+    public String getProviderId() {
+	return "demo";
+    }
+
+    @Override
     public boolean supports(Media media) {
         return media != null;
     }

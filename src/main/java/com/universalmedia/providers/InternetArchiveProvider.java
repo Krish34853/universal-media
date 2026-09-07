@@ -46,6 +46,11 @@ public class InternetArchiveProvider implements MediaProvider {
     }
 
     @Override
+    public String getProviderId() {
+	return "internet_archive";
+    }
+
+    @Override
     public boolean supports(Media media) {
 
         if (media == null) {

@@ -7,7 +7,12 @@ public interface MediaProvider {
 
     String getName();
 
+    String getProviderId();
+
     boolean supports(Media media);
 
-    ResolvedStream getStream(Media media, String quality) throws Exception;
+    ResolvedStream getStream(
+            Media media,
+            String quality
+    ) throws Exception;
 }

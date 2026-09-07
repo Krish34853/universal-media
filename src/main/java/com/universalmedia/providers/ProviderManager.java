@@ -31,7 +31,23 @@ public class ProviderManager {
     public MediaProvider findProvider(
             Media media
     ) {
+        if (media == null) {
+            return null;
+        }
+
+        String providerId =
+                media.getProviderId();
+
+        if (providerId == null || providerId.isBlank()) {
+            return null;
+        }
+
         for (MediaProvider provider : providers) {
+
+            if (!provider.getProviderId()
+                    .equalsIgnoreCase(providerId)) {
+                continue;
+            }
 
             if (provider.supports(media)) {
                 return provider;
@@ -46,9 +62,29 @@ public class ProviderManager {
             String quality
     ) throws Exception {
 
+        if (media == null) {
+            throw new IllegalArgumentException(
+                    "Media cannot be null."
+            );
+        }
+
+        String providerId =
+                media.getProviderId();
+
+        if (providerId == null || providerId.isBlank()) {
+            throw new RuntimeException(
+                    "Media does not specify a provider."
+            );
+        }
+
         Exception lastException = null;
 
         for (MediaProvider provider : providers) {
+
+            if (!provider.getProviderId()
+                    .equalsIgnoreCase(providerId)) {
+                continue;
+            }
 
             if (!provider.supports(media)) {
                 continue;
@@ -103,13 +139,16 @@ public class ProviderManager {
         if (lastException != null) {
 
             throw new RuntimeException(
-                    "All providers failed.",
+                    "Provider '"
+                            + providerId
+                            + "' failed.",
                     lastException
             );
         }
 
         throw new RuntimeException(
-                "No provider supports this media."
+                "No registered provider supports provider ID: "
+                        + providerId
         );
     }
 

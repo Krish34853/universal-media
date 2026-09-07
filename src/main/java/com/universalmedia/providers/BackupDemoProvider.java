@@ -16,6 +16,11 @@ public class BackupDemoProvider implements MediaProvider {
     }
 
     @Override
+    public String getProviderId() {
+	return "backup_demo";
+    }
+
+    @Override
     public boolean supports(Media media) {
         return media != null;
     }
