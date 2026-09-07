@@ -25,6 +25,9 @@ import com.universalmedia.model.ResolvedStream;
 import java.util.Arrays;
 import java.util.List;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 public class Main {
 
     // ============================================================
@@ -38,6 +41,9 @@ public class Main {
     private InternetArchiveProvider internetArchiveProvider;
     private MpvPlayer mpvPlayer;
     private MetadataManager metadataManager;
+
+    private static final Logger LOGGER =
+	    Logger.getLogger(Main.class.getName());
 
     // ============================================================
     // CONSTRUCTOR
@@ -104,7 +110,11 @@ public class Main {
 
         } catch (Exception e) {
 
-            e.printStackTrace();
+            LOGGER.log(
+		    Level.SEVERE,
+		    "Application failed to start.",
+		    e
+	    );
         }
     }
 
@@ -722,7 +732,7 @@ private void playMedia(
         );
 
         ResolvedStream stream =
-                provider.getStream(
+                providerManager.resolveStream(
                         media,
                         quality
                 );
@@ -753,18 +763,33 @@ private void playMedia(
 
         mpvPlayer.play(stream);
 
-    } catch (Exception e) {
+        } catch (Exception e) {
 
-        MessageDialog.showMessageDialog(
-                textGUI,
-                "Playback Error",
-                e.getMessage(),
-                MessageDialogButton.OK
-        );
+            LOGGER.log(
+		    Level.WARNING,
+		    "Playback failed for media: "
+			    + media.getTitle()
+			    + " at quality: "
+			    + quality,
+		    e
+	    );
 
-        e.printStackTrace();
+	    String message =
+                    e.getMessage();
+
+		    if (message == null || message.isBlank()) {
+			message =
+				"Unable to play this media.";
+		    }
+
+		    MessageDialog.showMessageDialog(
+				textGUI,
+				"Playback Error",
+				message,
+				MessageDialogButton.OK
+		    );
+            }
         }
-    }
     // ======================================================
     // Quality Selection
     // ======================================================
