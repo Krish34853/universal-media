@@ -14,9 +14,16 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class InternetArchiveMetadataProvider
         implements MetadataProvider {
+
+    private static final Logger LOGGER =
+            Logger.getLogger(
+                    InternetArchiveMetadataProvider.class.getName()
+            );
 
     private static final String SEARCH_URL =
             "https://archive.org/advancedsearch.php";
@@ -33,6 +40,8 @@ public class InternetArchiveMetadataProvider
 
         this.objectMapper =
                 new ObjectMapper();
+
+        LOGGER.info("Internet Archive metadata provider initialized.");
     }
 
     @Override
@@ -43,8 +52,17 @@ public class InternetArchiveMetadataProvider
             return List.of();
         }
 
+        LOGGER.info(
+                () -> "Searching Internet Archive metadata for: " + query
+        );
+
         List<ArchiveCandidate> candidates =
-                searchArchive(query, 0);
+                searchArchive(query);
+
+        LOGGER.info(
+                () -> "Internet Archive metadata candidates found: "
+                        + candidates.size()
+        );
 
         List<Media> results =
                 new ArrayList<>();
@@ -68,12 +86,16 @@ public class InternetArchiveMetadataProvider
             );
         }
 
+        LOGGER.info(
+                () -> "Internet Archive metadata results created: "
+                        + results.size()
+        );
+
         return results;
     }
 
     private List<ArchiveCandidate> searchArchive(
-            String title,
-            int releaseYear
+            String title
     ) throws Exception {
 
         String normalizedTitle =
@@ -111,13 +133,34 @@ public class InternetArchiveMetadataProvider
                         .GET()
                         .build();
 
-        HttpResponse<String> response =
-                httpClient.send(
-                        request,
-                        HttpResponse.BodyHandlers.ofString()
-                );
+        HttpResponse<String> response;
+
+        try {
+
+            response =
+                    httpClient.send(
+                            request,
+                            HttpResponse.BodyHandlers.ofString()
+                    );
+
+        } catch (IOException | InterruptedException e) {
+
+            LOGGER.log(
+                    Level.WARNING,
+                    "Internet Archive metadata request failed.",
+                    e
+            );
+
+            throw e;
+        }
 
         if (response.statusCode() != 200) {
+
+            LOGGER.warning(
+                    "Internet Archive metadata search failed. HTTP "
+                            + response.statusCode()
+            );
+
             throw new IOException(
                     "Internet Archive search failed. HTTP "
                             + response.statusCode()
@@ -132,6 +175,15 @@ public class InternetArchiveMetadataProvider
         JsonNode docs =
                 root.path("response")
                         .path("docs");
+
+        if (!docs.isArray()) {
+
+            LOGGER.warning(
+                    "Internet Archive metadata response contains no valid docs array."
+            );
+
+            return List.of();
+        }
 
         List<ArchiveCandidate> candidates =
                 new ArrayList<>();
@@ -155,15 +207,11 @@ public class InternetArchiveMetadataProvider
                 continue;
             }
 
-            int candidateYear =
-                    extractYear(year);
 
             int score =
                     calculateTitleScore(
                             normalizedTitle,
-                            normalizeTitle(candidateTitle),
-                            releaseYear,
-                            candidateYear
+                            normalizeTitle(candidateTitle)
                     );
 
             candidates.add(
@@ -181,29 +229,15 @@ public class InternetArchiveMetadataProvider
 
     private int calculateTitleScore(
             String requestedTitle,
-            String candidateTitle,
-            int requestedYear,
-            int candidateYear
+            String candidateTitle
     ) {
 
         if (requestedTitle.equals(candidateTitle)) {
-
-            if (requestedYear > 0
-                    && candidateYear == requestedYear) {
-                return 100;
-            }
-
             return 90;
         }
 
         if (candidateTitle.contains(requestedTitle)
                 || requestedTitle.contains(candidateTitle)) {
-
-            if (requestedYear > 0
-                    && candidateYear == requestedYear) {
-                return 80;
-            }
-
             return 70;
         }
 
@@ -231,17 +265,9 @@ public class InternetArchiveMetadataProvider
                 (double) matchedWords
                         / requestedWords.length;
 
-        int score =
-                (int) Math.round(
-                        wordMatchRatio * 50
-                );
-
-        if (requestedYear > 0
-                && candidateYear == requestedYear) {
-            score += 20;
-        }
-
-        return score;
+        return (int) Math.round(
+                wordMatchRatio * 50
+        );
     }
 
     private String normalizeTitle(
@@ -298,37 +324,6 @@ public class InternetArchiveMetadataProvider
                         ")",
                         "\\)"
                 );
-    }
-
-    private int extractYear(
-            String value
-    ) {
-
-        if (value == null
-                || value.isBlank()) {
-            return 0;
-        }
-
-        java.util.regex.Matcher matcher =
-                java.util.regex.Pattern
-                        .compile(
-                                "(19|20)\\d{2}"
-                        )
-                        .matcher(value);
-
-        if (matcher.find()) {
-
-            try {
-
-                return Integer.parseInt(
-                        matcher.group()
-                );
-
-            } catch (NumberFormatException ignored) {
-            }
-        }
-
-        return 0;
     }
 
     private static class ArchiveCandidate {

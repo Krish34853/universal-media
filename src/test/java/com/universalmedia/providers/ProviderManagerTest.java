@@ -255,7 +255,7 @@ class ProviderManagerTest {
 
         assertSame(provider, found);
     }
-	@Test
+    @Test
 	void routesToInternetArchiveProvider() {
 
     	ProviderManager manager =
@@ -300,4 +300,35 @@ class ProviderManagerTest {
 
         assertNull(found);
 	}
+
+    @Test
+    void internetArchiveSupportsMovieMedia() {
+
+        InternetArchiveProvider provider =
+                new InternetArchiveProvider();
+
+        Media media =
+                createMedia(
+                        "internet_archive",
+                        "movie"
+                );
+
+        assertTrue(provider.supports(media));
+    }
+
+    @Test
+    void internetArchiveDoesNotSupportTvMedia() {
+
+        InternetArchiveProvider provider =
+                new InternetArchiveProvider();
+
+        Media media =
+                createMedia(
+                        "internet_archive",
+                        "tv"
+                );
+
+        assertFalse(provider.supports(media));
+    }
+
 }

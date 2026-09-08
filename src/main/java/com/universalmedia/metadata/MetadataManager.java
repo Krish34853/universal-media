@@ -64,7 +64,7 @@ public class MetadataManager {
 
                 LOGGER.log(
 			Level.WARNING,
-			"Mettadata provider failed: "
+			"Metadata provider failed: "
 				+ provider.getClass().getSimpleName(),
                          e
                 );

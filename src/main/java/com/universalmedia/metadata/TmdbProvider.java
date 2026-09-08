@@ -12,17 +12,28 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class TmdbProvider implements MetadataProvider {
 
     private static final String BASE_URL =
             "https://api.themoviedb.org/3";
 
+    private static final Logger LOGGER =
+            Logger.getLogger(TmdbProvider.class.getName());
+
     private final String accessToken;
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
 
     public TmdbProvider(String accessToken) {
+
+        if (accessToken == null || accessToken.isBlank()) {
+            throw new IllegalArgumentException(
+                    "TMDB access token cannot be empty."
+            );
+        }
 
         this.accessToken = accessToken;
 
@@ -33,10 +44,21 @@ public class TmdbProvider implements MetadataProvider {
 
         this.objectMapper =
                 new ObjectMapper();
+
+        LOGGER.info("TMDB provider initialized.");
     }
 
     @Override
-    public List<Media> search(String query) throws Exception {
+    public List<Media> search(String query)
+            throws Exception {
+
+        if (query == null || query.isBlank()) {
+            return List.of();
+        }
+
+        LOGGER.info(
+                () -> "Searching TMDB for: " + query
+        );
 
         String encodedQuery =
                 URLEncoder.encode(
@@ -67,13 +89,33 @@ public class TmdbProvider implements MetadataProvider {
                         .GET()
                         .build();
 
-        HttpResponse<String> response =
-                httpClient.send(
-                        request,
-                        HttpResponse.BodyHandlers.ofString()
-                );
+        HttpResponse<String> response;
+
+        try {
+
+            response =
+                    httpClient.send(
+                            request,
+                            HttpResponse.BodyHandlers.ofString()
+                    );
+
+        } catch (Exception e) {
+
+            LOGGER.log(
+                    Level.WARNING,
+                    "TMDB request failed.",
+                    e
+            );
+
+            throw e;
+        }
 
         if (response.statusCode() != 200) {
+
+            LOGGER.warning(
+                    () -> "TMDB API returned HTTP "
+                            + response.statusCode()
+            );
 
             throw new RuntimeException(
                     "TMDB API error: HTTP "
@@ -83,7 +125,16 @@ public class TmdbProvider implements MetadataProvider {
             );
         }
 
-        return parseResults(response.body());
+        List<Media> results =
+                parseResults(response.body());
+
+        LOGGER.info(
+                () -> "TMDB search returned "
+                        + results.size()
+                        + " media results."
+        );
+
+        return results;
     }
 
     private List<Media> parseResults(String json)
@@ -100,6 +151,10 @@ public class TmdbProvider implements MetadataProvider {
 
         if (resultArray == null ||
                 !resultArray.isArray()) {
+
+            LOGGER.warning(
+                    "TMDB response did not contain a valid results array."
+            );
 
             return results;
         }
@@ -167,7 +222,7 @@ public class TmdbProvider implements MetadataProvider {
                             releaseDate,
                             rating,
                             posterPath,
-			    "tmdb"
+                            "tmdb"
                     )
             );
         }
